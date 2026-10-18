@@ -138,6 +138,7 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
 .phase-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
 .phase-btns button{padding:0;font-size:13px}
 #downbeatBtn{width:100%}
+#markInfo b{color:var(--accent2)}
 #detectStatus{font-size:12px;color:var(--muted);min-height:1em;margin-top:6px}
 .meter{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:6px;display:none}
 .meter > div{height:100%;width:0;background:var(--accent2);transition:width .2s linear}
@@ -377,8 +378,14 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
       </div>
       <div id="phaseRow">
         <div class="row" style="margin-top:8px">
-          <button id="downbeatBtn" title="재생 중 1박에서 누르기 (D)">지금이 1박 <kbd class="hover-only">D</kbd></button>
+          <button id="downbeatBtn" title="재생 중 1박에서 누르기 (D)">지금이 1박 · 싱크 포인트 추가 <kbd class="hover-only">D</kbd></button>
         </div>
+        <div class="row" style="margin-top:6px">
+          <span class="hint" style="flex:1" id="markInfo">싱크 포인트 없음</span>
+          <button id="undoMark" class="ghost" style="min-height:34px">되돌리기</button>
+          <button id="clearMarks" class="ghost" style="min-height:34px">모두 지우기</button>
+        </div>
+        <div class="hint">곡의 처음·중간·끝 여러 곳에서 1박에 누르면, 그 사이 템포를 정확히 맞춰서 어디로 이동해도 박이 어긋나지 않아요. 템포가 조금씩 변하는 곡도 따라가요.</div>
         <div class="phase-btns">
           <button data-phase="-0.02">-20ms</button>
           <button data-phase="-0.005">-5ms</button>
@@ -431,6 +438,7 @@ const S = {
   videoId: null, title: '',
   A: null, B: null, loop: false, reps: 0,
   bpm: 120, anchor: 0,           // anchor = video time (s) of a bar's beat 1
+  marks: [],                     // 싱크 포인트 [{t: 영상 시간, k: 박 번호}] — 2개 이상이면 이 점들을 이어 박 위치를 계산
   beats: 4, sub: 1, accent: true, sound: 'beep', vol: 0.7,
   sync: true, metroOn: false,
   countIn: 0, snap: false,
@@ -450,7 +458,7 @@ function saveVideo() {
   clearTimeout(saveVideoTimer);
   saveVideoTimer = setTimeout(() => {
     if (!S.videoId) return;
-    store.set('v:' + S.videoId, { title: S.title, A: S.A, B: S.B, bpm: S.bpm, anchor: S.anchor, sections: S.sections, rate: S.rate });
+    store.set('v:' + S.videoId, { title: S.title, A: S.A, B: S.B, bpm: S.bpm, anchor: S.anchor, marks: S.marks, sections: S.sections, rate: S.rate });
   }, 300);
 }
 
@@ -505,7 +513,7 @@ function loadVideo(id, t = 0) {
   const saved = store.get('v:' + id, null);
   S.videoId = id; S.reps = 0;
   S.A = saved?.A ?? null; S.B = saved?.B ?? null; S.loop = false;
-  S.bpm = saved?.bpm ?? 120; S.anchor = saved?.anchor ?? 0;
+  S.bpm = saved?.bpm ?? 120; S.anchor = saved?.anchor ?? 0; S.marks = saved?.marks ?? [];
   S.sections = saved?.sections ?? []; S.title = saved?.title ?? '';
   S.rate = saved?.rate ?? 1;
   const start = t || (S.A ?? 0);
@@ -587,10 +595,40 @@ function renderRecent() {
 let lastSeekAt = 0, countingIn = false;
 function validLoop() { return S.A != null && S.B != null && S.B - S.A > 0.05; }
 function beatPeriod() { return 60 / S.bpm; }
+// 박 번호(실수) ↔ 영상 시간. 싱크 포인트가 2개 이상이면 이웃한 포인트끼리 직선으로 이어
+// 구간마다 실제 템포를 반영하고, 범위 밖은 가장 가까운 구간의 템포로 연장함
+function markSeg(key, v) {
+  const m = S.marks; let i = 0;
+  while (i < m.length - 2 && v > m[i + 1][key]) i++;
+  return [m[i], m[i + 1]];
+}
+function beatTime(x) {
+  if (S.marks.length < 2) return S.anchor + x * 60 / S.bpm;
+  const [a, b] = markSeg('k', x);
+  return a.t + (x - a.k) * (b.t - a.t) / (b.k - a.k);
+}
+function beatPos(t) {
+  if (S.marks.length < 2) return (t - S.anchor) * S.bpm / 60;
+  const [a, b] = markSeg('t', t);
+  return a.k + (t - a.t) * (b.k - a.k) / (b.t - a.t);
+}
+function applyMarks() {
+  const m = S.marks;
+  m.sort((a, b) => a.t - b.t);
+  for (let i = 1; i < m.length; i++) if (m[i].k <= m[i - 1].k) { m.splice(i, 1); i--; }
+  if (m.length === 1) S.anchor = m[0].t - m[0].k * 60 / S.bpm;
+  if (m.length >= 2) {
+    const a = m[0], b = m[m.length - 1];
+    S.bpm = Math.round(60 * (b.k - a.k) / (b.t - a.t) * 10) / 10;   // 표시용 평균 템포
+    S.anchor = beatTime(0);
+    $('#bpmInput').value = S.bpm;
+  }
+  resetSync(); saveVideo(); renderMetroInfo();
+}
+function clearMarks() { if (S.marks.length) { S.marks = []; renderMetroInfo(); } }
 function snapT(t) {
   if (!S.snap) return t;
-  const p = beatPeriod() / S.sub;
-  return S.anchor + Math.round((t - S.anchor) / p) * p;
+  return beatTime(Math.round(beatPos(t) * S.sub) / S.sub);
 }
 function setA(t) {
   if (t == null) { S.A = null; } else { S.A = Math.max(0, snapT(t)); if (S.B != null && S.B <= S.A) S.B = null; }
@@ -761,7 +799,6 @@ function queueVisual(t, beatInBar, main) { if (main) visQ.push({ t, b: beatInBar
 /* 동기화 모드: 영상 시간 → 오디오 시간 매핑 모델 */
 let model = null, lastTick = null, lastRawVt = -1, freeNext = 0, freeTick = 0, muteClicks = false;
 function resetSync() { model = null; lastTick = null; }
-function tickLen() { return 60 / S.bpm / S.sub; }
 function tickKind(k) {
   const perBar = S.sub * S.beats;
   const m = ((k % perBar) + perBar) % perBar;
@@ -778,11 +815,10 @@ function scheduleSync(vt, rate) {
     else model.v0 += err * 0.15;
   }
   const pred = model.v0 + (now - model.a0) * rate;
-  const L = tickLen();
-  if (lastTick == null) lastTick = Math.ceil((pred - S.anchor) / L - 0.15) - 1;
+  if (lastTick == null) lastTick = Math.ceil(beatPos(pred) * S.sub - 0.15) - 1;
   const horizon = now + 0.15;
   for (let k = lastTick + 1; ; k++) {
-    const bt = S.anchor + k * L;
+    const bt = beatTime(k / S.sub);
     const at = now + (bt - pred) / rate;
     if (at > horizon) break;
     lastTick = k;
@@ -869,7 +905,7 @@ function tap() {
     const icpt = (sy - slope * sx) / n;
     if (slope > 0.15 && slope < 3) {
       bpm = 60 / slope;
-      if (taps.length >= 4) { S.anchor = icpt; resetSync(); }
+      if (taps.length >= 4) { S.anchor = icpt; clearMarks(); resetSync(); }
     }
   } else {
     const iv = []; for (let i = 1; i < recent.length; i++) iv.push(recent[i].real - recent[i - 1].real);
@@ -883,15 +919,23 @@ function downbeatNow() {
   if (!isPlaying()) { toast('재생 중에 1박에서 눌러주세요'); return; }
   ensureAudio();
   const vt = model ? model.v0 + (actx.currentTime - model.a0) * S.rate : curTime();
-  const p = beatPeriod();
-  const k = Math.round((vt - S.anchor) / p);
-  S.anchor += k * p;
-  // 박 그리드가 안 맞을 정도로 멀면 탭 위치 자체를 1박으로
-  if (Math.abs(vt - S.anchor) > p * 0.25) S.anchor = vt;
-  resetSync(); saveVideo(); toast('1박 위치 맞춤');
+  if (!S.marks.length) {
+    // 첫 포인트: 탭/감지로 맞춘 박 격자와 가까우면 그 박을 쓰고, 아니면 누른 위치를 1박으로
+    const p = beatPeriod(), near = S.anchor + Math.round((vt - S.anchor) / p) * p;
+    S.marks = [{ t: Math.abs(vt - near) <= p * 0.25 ? near : vt, k: 0, added: Date.now() }];
+    applyMarks(); toast('1박 위치 맞춤 · 곡의 다른 곳에서도 눌러 주면 더 정확해져요');
+    return;
+  }
+  // 현재 박 지도에서 가장 가까운 마디의 1박으로 보고 포인트 추가 (같은 마디 포인트는 교체)
+  const k = Math.round(beatPos(vt) / S.beats) * S.beats;
+  S.marks = S.marks.filter(m => m.k !== k);
+  S.marks.push({ t: vt, k, added: Date.now() });
+  applyMarks();
+  toast('싱크 포인트 ' + S.marks.length + '개 · 평균 ' + S.bpm + ' BPM');
 }
 function setBpm(b, keepTaps) {
   b = clamp(+b || 120, 20, 300);
+  if (S.marks.length) { S.anchor = beatTime(0); clearMarks(); toast('BPM을 직접 바꿔서 싱크 포인트를 지웠어요'); }
   // BPM 변경 시 현재 위치 근처의 박을 기준으로 앵커 유지
   if (playerReady && S.sync) {
     const vt = curTime(), oldP = 60 / S.bpm;
@@ -964,6 +1008,7 @@ async function detectBpm(source) {
   S.bpm = orig; $('#bpmInput').value = orig;
   if (vt0 != null) {
     S.anchor = vt0 + res.phase * rate0;   // 박 위치(1박은 정확하지 않을 수 있음)
+    clearMarks();
   }
   taps = []; resetSync(); saveVideo(); renderMetroInfo();
   status.textContent = `감지된 BPM: ${orig} (신뢰도 ${res.conf}) — 반/두 배로 들리면 ÷2·×2, 1박은 "지금이 1박"으로 맞추세요`;
@@ -1080,22 +1125,28 @@ function renderTimeline(t, d) {
   $('#tlStart').textContent = fmt(v0, zoom === 'loop' ? 1 : 0);
   $('#tlEnd').textContent = fmt(v1, zoom === 'loop' ? 1 : 0);
   // 박 그리드 (확대 시)
-  const key = [v0, v1, S.bpm, S.anchor, S.beats, tlEl.clientWidth].join('|');
+  const key = [v0, v1, S.bpm, S.anchor, S.beats, tlEl.clientWidth, S.marks.map(m => m.t).join()].join('|');
   if (key !== lastCanvasKey) {
     lastCanvasKey = key;
     const dpr = window.devicePixelRatio || 1, W = tlEl.clientWidth, Hh = tlEl.clientHeight;
     canvas.width = W * dpr; canvas.height = Hh * dpr;
     const c = canvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, Hh);
-    const p = 60 / S.bpm;
-    if (span / p < W / 6) {
-      const k0 = Math.ceil((v0 - S.anchor) / p), k1 = Math.floor((v1 - S.anchor) / p);
+    const k0 = Math.ceil(beatPos(v0)), k1 = Math.floor(beatPos(v1));
+    if (k1 - k0 < W / 6) {
       for (let k = k0; k <= k1; k++) {
-        const x = ((S.anchor + k * p) - v0) / span * W;
+        const x = (beatTime(k) - v0) / span * W;
         const bar = ((k % S.beats) + S.beats) % S.beats === 0;
         c.fillStyle = bar ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)';
         c.fillRect(Math.round(x), bar ? 0 : Hh * 0.55, 1, bar ? Hh : Hh * 0.45);
       }
     }
+    // 싱크 포인트 표시
+    c.fillStyle = '#4fb3a9';
+    S.marks.forEach(m => {
+      if (m.t < v0 || m.t > v1) return;
+      const x = (m.t - v0) / span * W;
+      c.beginPath(); c.moveTo(x - 5, Hh); c.lineTo(x + 5, Hh); c.lineTo(x, Hh - 8); c.fill();
+    });
   }
 }
 function tlTime(ev) {
@@ -1152,6 +1203,9 @@ function renderMetroInfo() {
   const eff = S.bpm * S.rate;
   $('#effBpm').textContent = `실제 클릭 템포 ${eff.toFixed(1)} BPM` + (S.rate !== 1 ? ` (원곡 ${S.bpm} × ${Math.round(S.rate * 100)}%)` : '');
   $('#phaseRow').style.opacity = S.sync ? 1 : 0.4;
+  const n = S.marks.length;
+  $('#markInfo').innerHTML = n ? `싱크 포인트 <b>${n}개</b>` + (n >= 2 ? ` · 평균 ${S.bpm} BPM` : ' · 하나 더 찍으면 템포 보정') : '싱크 포인트 없음';
+  $('#undoMark').disabled = $('#clearMarks').disabled = !n;
   lastCanvasKey = '';
 }
 function renderTrainer() {
@@ -1220,7 +1274,20 @@ $('#halfBpm').onclick = () => setBpm(Math.round(S.bpm / 2 * 10) / 10);
 $('#dblBpm').onclick = () => setBpm(Math.round(S.bpm * 2 * 10) / 10);
 $('#tapBtn').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
 $('#downbeatBtn').onclick = downbeatNow;
-$$('[data-phase]').forEach(b => b.onclick = () => { S.anchor += +b.dataset.phase; resetSync(); saveVideo(); lastCanvasKey = ''; });
+$$('[data-phase]').forEach(b => b.onclick = () => {
+  const d = +b.dataset.phase;
+  S.anchor += d; S.marks.forEach(m => { m.t += d; });
+  resetSync(); saveVideo(); lastCanvasKey = '';
+});
+$('#undoMark').onclick = () => {
+  if (!S.marks.length) return;
+  // 가장 최근에 추가한 포인트 = 배열에서 가장 마지막에 push된 것 (정렬돼 있으므로 기록해 둔 순서 사용)
+  const last = S.marks.reduce((a, m) => (m.added || 0) > (a.added || 0) ? m : a, S.marks[0]);
+  S.marks = S.marks.filter(m => m !== last);
+  if (!S.marks.length) { renderMetroInfo(); saveVideo(); } else applyMarks();
+  toast('싱크 포인트 되돌림');
+};
+$('#clearMarks').onclick = () => { S.anchor = beatTime(0); clearMarks(); resetSync(); saveVideo(); toast('싱크 포인트를 모두 지웠어요'); };
 $('#beatsSel').onchange = e => { S.beats = +e.target.value; renderDots(); resetSync(); saveGlobal(); lastCanvasKey = ''; };
 $('#subSel').onchange = e => { S.sub = +e.target.value; resetSync(); saveGlobal(); };
 $('#accentChk').onchange = e => { S.accent = e.target.checked; renderDots(); saveGlobal(); };
