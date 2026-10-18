@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111315">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Track0 · 기타 연습</title>
+<style>
+/* ===== 모바일 기본, 900px 이상은 PC 레이아웃 ===== */
+:root{
+  --bg:#111315; --panel:#1a1d21; --panel2:#22262b; --line:#2e333a;
+  --text:#e8e6e3; --muted:#8b9099; --accent:#f2a33a; --accent2:#4fb3a9;
+  --danger:#e5604d; --region:rgba(242,163,58,.22);
+  --radius:12px; --tap:44px; --bar-h:64px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font-size:15px;line-height:1.45;padding-bottom:calc(var(--bar-h) + var(--safe-b) + 12px);overscroll-behavior-y:none}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 12px;min-height:var(--tap);cursor:pointer;white-space:nowrap;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:active{transform:translateY(1px);filter:brightness(1.15)}
+button.on,button.primary{background:var(--accent);border-color:var(--accent);color:#1b1205;font-weight:600}
+button.ghost{background:transparent}
+input[type=text],input[type=number],select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 10px;min-height:var(--tap);min-width:0;font-size:16px}
+input[type=number]{width:76px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent2);outline-offset:1px}
+input[type=range]{accent-color:var(--accent);width:100%;height:32px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);vertical-align:-4px}
+label{color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--text)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.desk-only{display:none !important}
+
+header{display:flex;gap:10px;align-items:center;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.brand{font-weight:800;letter-spacing:.5px;font-size:17px}
+.brand span{color:var(--accent)}
+#urlForm{display:flex;gap:6px;flex:1;min-width:0}
+#urlInput{flex:1}
+#recent{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px;scrollbar-width:none}
+#recent::-webkit-scrollbar{display:none}
+#recent:empty{display:none}
+#recent button{font-size:13px;min-height:34px;max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--muted);flex:0 0 auto}
+
+.app{display:flex;flex-direction:column;gap:12px;padding:0 12px}
+.app > .main,.app > .side{display:contents}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.card h3{margin:0 0 10px;font-size:13px;letter-spacing:.3px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;min-height:24px}
+.card h3 .spacer{flex:1}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row + .row{margin-top:8px}
+.hint{color:var(--muted);font-size:12px}
+.sep{height:1px;background:var(--line);margin:12px 0}
+
+/* stage: 영상 + 타임라인 (모바일 세로에선 위에 고정) */
+.stage{display:flex;flex-direction:column;gap:8px;background:var(--bg);margin:0 -12px;padding:0 12px 8px}
+@media (max-width:899px) and (orientation:portrait) and (min-height:640px){
+  .stage{position:sticky;top:0;z-index:5;box-shadow:0 8px 12px -8px rgba(0,0,0,.6)}
+}
+.player-wrap{position:relative;aspect-ratio:16/9;background:#000;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
+.player-wrap iframe,#player{position:absolute;inset:0;width:100%;height:100%}
+#placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;padding:16px;font-size:13px}
+#placeholder b{color:var(--text);font-size:15px}
+#errorMsg{color:var(--danger)}
+#countInOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:88px;font-weight:800;color:var(--accent);background:rgba(0,0,0,.45);pointer-events:none}
+
+.tl-wrap{user-select:none;-webkit-user-select:none}
+.tl-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:6px}
+.transport{display:flex;gap:6px;align-items:center}
+.transport button{min-height:36px;padding:0 10px;font-size:13px}
+#timeDisp{font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:0 0 auto}
+.seg button{border:0;border-radius:0;min-height:36px;padding:0 10px;font-size:13px}
+.seg button + button{border-left:1px solid var(--line)}
+#timeline{position:relative;height:48px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;cursor:pointer;touch-action:none;overflow:hidden}
+#tlCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#tlRegion{position:absolute;top:0;bottom:0;background:var(--region);border-left:2px solid var(--accent);border-right:2px solid var(--accent);display:none;pointer-events:none}
+#tlRegion.off{background:rgba(255,255,255,.06);border-color:#666}
+#tlHead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.6)}
+.tl-handle{position:absolute;top:0;bottom:0;width:36px;margin-left:-18px;cursor:ew-resize;display:none;z-index:2}
+.tl-handle::after{content:attr(data-l);position:absolute;top:3px;left:50%;transform:translateX(-50%);background:var(--accent);color:#1b1205;font-weight:700;font-size:11px;border-radius:4px;padding:1px 5px;pointer-events:none}
+.tl-handle.off::after{background:#777}
+.tl-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:3px;gap:8px}
+
+/* 탭 (모바일) */
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:4px;gap:4px}
+.tabs button{border:0;background:transparent;color:var(--muted);font-weight:600}
+.tabs button.cur{background:var(--panel2);color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+body[data-tab="loop"] .panel:not([data-panel="loop"]),
+body[data-tab="speed"] .panel:not([data-panel="speed"]),
+body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
+
+/* 구간 */
+.ab-row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;align-items:center}
+.ab-row + .ab-row{margin-top:10px}
+.ab-row .lbl{font-weight:800;color:var(--accent);font-size:16px}
+.ab-row input{width:100%;text-align:center}
+.ab-row .nudges{grid-column:2 / 4;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ab-row .nudges button{padding:0;font-size:13px}
+#loopBtn{flex:1}
+#sections{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.sec{display:flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 4px 0 12px;min-height:var(--tap);cursor:pointer}
+.sec.active{border-color:var(--accent)}
+.sec .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec .tm{color:var(--muted);font-size:12px}
+.sec button{min-height:38px;padding:0 10px;background:transparent;border-color:transparent;color:var(--muted)}
+
+/* 속도 */
+#speedVal{font-size:26px;font-weight:700;min-width:76px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chips button{padding:0;font-size:14px}
+.speed-steps{display:flex;gap:6px}
+.speed-steps button{flex:1}
+.tr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tr-grid label{justify-content:space-between;background:var(--panel2);border-radius:10px;padding:4px 4px 4px 10px}
+.tr-grid input{width:64px;text-align:center}
+
+/* 메트로놈 */
+.bpm-row{display:grid;grid-template-columns:44px 1fr 44px;gap:6px;align-items:center}
+#bpmInput{font-size:34px;font-weight:700;width:100%;text-align:center;min-height:60px}
+.bpm-row > button{min-height:60px;font-size:22px;padding:0}
+.bpm-sub{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.bpm-sub button{padding:0;font-size:13px}
+#beatDots{display:flex;gap:8px;justify-content:center;padding:10px 0 2px}
+.dot{width:20px;height:20px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);transition:background .05s}
+.dot.first{border-color:var(--accent)}
+.dot.lit{background:var(--accent2)}
+.dot.first.lit{background:var(--accent)}
+#effBpm{color:var(--muted);font-size:12px;text-align:center}
+#tapBtn{width:100%;min-height:72px;font-size:20px;font-weight:800;letter-spacing:1px}
+#metroBtn{width:100%;min-height:52px;font-size:16px;font-weight:700}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt-grid label{flex-direction:column;align-items:stretch;gap:4px;font-size:12px}
+.phase-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.phase-btns button{padding:0;font-size:13px}
+#downbeatBtn{width:100%}
+#detectStatus{font-size:12px;color:var(--muted);min-height:1em;margin-top:6px}
+.meter{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:6px;display:none}
+.meter > div{height:100%;width:0;background:var(--accent2);transition:width .2s linear}
+.kbd-list{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12px;color:var(--muted)}
+
+/* 하단 바 (모바일) */
+.bottom-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px 8px calc(6px + var(--safe-b));background:rgba(26,29,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.bottom-bar button{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;font-size:18px;background:transparent;border-color:transparent}
+.bottom-bar button small{font-size:10px;color:var(--muted);font-weight:500}
+.bottom-bar button.on{background:var(--accent);color:#1b1205}
+.bottom-bar button.on small{color:#1b1205}
+.bottom-bar #bbPlay{background:var(--panel2);border-color:var(--line);font-size:22px}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--bar-h) + var(--safe-b) + 20px);transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+
+/* 휴대폰 가로: 영상 왼쪽 고정, 컨트롤 오른쪽 */
+@media (max-width:999px) and (orientation:landscape) and (max-height:540px){
+  header{padding-top:8px;padding-bottom:6px}
+  body.has-video header,body.has-video #recent{display:none}
+  .app{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:10px 12px;padding-top:8px;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .stage{grid-column:1;grid-row:1 / span 20;position:sticky;top:8px;margin:0;padding:0;width:min(58vw,calc((100dvh - var(--bar-h) - var(--safe-b) - 124px) * 16 / 9))}
+  .tl-top .transport button,.seg button{padding:0 8px}
+  .app > .main > :not(.stage),.app > .side > *{grid-column:2}
+}
+
+/* ===== PC ===== */
+@media (min-width:900px){
+  body{font-size:14px;padding-bottom:24px}
+  :root{--tap:36px}
+  .desk-only{display:revert !important}
+  .mobile-only{display:none !important}
+  button{border-radius:8px;padding:0 10px}
+  button:hover{border-color:#4a515b}
+  input[type=text],input[type=number],select{font-size:14px;border-radius:8px}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  #recent{padding:0 16px 12px;flex-wrap:wrap}
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:0 16px;max-width:1500px;margin:0 auto;align-items:start}
+  .app > .main,.app > .side{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .stage{margin:0;padding:0;gap:14px}
+  .tl-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  .card{padding:12px 14px}
+  body[data-tab] .panel{display:block !important}
+  .bottom-bar{display:none}
+  .toast{bottom:24px}
+  #bpmInput{min-height:52px;font-size:30px}
+  .bpm-row > button{min-height:52px}
+  #tapBtn{min-height:56px}
+  #metroBtn{min-height:42px}
+  .tl-handle{width:18px;margin-left:-9px}
+  .bottom-bar button,.chips button{min-height:34px}
+}
+@media (hover:none){ .hover-only{display:none !important} }
+</style>
+</head>
+<body data-tab="loop">
+<header>
+  <div class="brand">Track<span>0</span></div>
+  <form id="urlForm" autocomplete="off">
+    <input id="urlInput" type="text" inputmode="url" placeholder="YouTube 링크 붙여넣기">
+    <button class="primary" type="submit">열기</button>
+  </form>
+</header>
+<div id="recent"></div>
+
+<div class="app">
+  <div class="main">
+    <div class="stage">
+      <div class="player-wrap">
+        <div id="player"></div>
+        <div id="placeholder">
+          <b>연습할 곡의 YouTube 링크를 붙여넣으세요</b>
+          <div>구간 반복 · 속도 조절 · 영상에 맞춰 도는 메트로놈</div>
+          <div id="errorMsg"></div>
+        </div>
+        <div id="countInOverlay"></div>
+      </div>
+
+      <div class="tl-wrap">
+        <div class="tl-top">
+          <div class="transport">
+            <button id="playBtn" class="desk-only" title="재생/일시정지 (Space)" style="width:52px;font-size:16px">▶</button>
+            <button id="back5" title="-5초">-5s</button>
+            <button id="fwd5" title="+5초">+5s</button>
+            <button id="toA" class="desk-only" title="A로 이동 (Enter)">⇤ A</button>
+            <span id="timeDisp" class="mono">0:00.0</span>
+          </div>
+          <div class="seg" title="타임라인 보기 범위">
+            <button id="zoomAll" class="on">전체</button>
+            <button id="zoomLoop">구간</button>
+          </div>
+        </div>
+        <div id="timeline">
+          <canvas id="tlCanvas"></canvas>
+          <div id="tlRegion"></div>
+          <div class="tl-handle" id="hA" data-l="A"></div>
+          <div class="tl-handle" id="hB" data-l="B"></div>
+          <div id="tlHead"></div>
+        </div>
+        <div class="tl-labels mono"><span id="tlStart">0:00</span><span class="hint" id="tlHint">탭: 이동 · 끌기: 구간 지정</span><span id="tlEnd">0:00</span></div>
+      </div>
+    </div>
+
+    <nav class="tabs mobile-only" id="tabs">
+      <button data-tab="loop" class="cur">구간 반복</button>
+      <button data-tab="speed">속도</button>
+      <button data-tab="metro">메트로놈</button>
+    </nav>
+
+    <section class="card panel" data-panel="loop">
+      <h3>구간 반복 <span class="spacer"></span><span id="repCount" class="mono">반복 0회</span></h3>
+      <div class="ab-row">
+        <div class="lbl">A</div>
+        <input id="aInput" class="mono" type="text" inputmode="decimal" placeholder="-">
+        <button id="setA" class="primary" title="현재 위치를 A로 ( [ )">지금 = A</button>
+        <div class="nudges">
+          <button data-nudge="A" data-d="-1">-1s</button>
+          <button data-nudge="A" data-d="-0.1">-0.1</button>
+          <button data-nudge="A" data-d="0.1">+0.1</button>
+          <button data-nudge="A" data-d="1">+1s</button>
+        </div>
+      </div>
+      <div class="ab-row">
+        <div class="lbl">B</div>
+        <input id="bInput" class="mono" type="text" inputmode="decimal" placeholder="-">
+        <button id="setB" class="primary" title="현재 위치를 B로 ( ] )">지금 = B</button>
+        <div class="nudges">
+          <button data-nudge="B" data-d="-1">-1s</button>
+          <button data-nudge="B" data-d="-0.1">-0.1</button>
+          <button data-nudge="B" data-d="0.1">+0.1</button>
+          <button data-nudge="B" data-d="1">+1s</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="loopBtn" title="반복 켜기/끄기 (L)">⟳ 반복 꺼짐</button>
+        <button id="clearAB" class="ghost">지우기</button>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="snapChk"> 박에 스냅</label>
+        <label title="반복 시작 전에 메트로놈으로 카운트">카운트인
+          <select id="countInSel">
+            <option value="0">없음</option>
+            <option value="1">1마디</option>
+            <option value="2">2마디</option>
+          </select>
+        </label>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="saveSec">＋ 현재 구간 저장</button>
+        <span class="hint">영상별로 저장돼요</span>
+      </div>
+      <div id="sections"></div>
+    </section>
+  </div>
+
+  <div class="side">
+    <section class="card panel" data-panel="speed">
+      <h3>재생 속도 <span class="spacer"></span><span class="hint hover-only"><kbd>↑</kbd><kbd>↓</kbd></span></h3>
+      <div class="row">
+        <div id="speedVal" class="mono">100%</div>
+        <input id="speedRange" type="range" min="25" max="200" step="5" value="100" style="flex:1">
+      </div>
+      <div class="speed-steps" style="margin:8px 0">
+        <button id="speedDown">－5%</button>
+        <button id="speedUp">＋5%</button>
+      </div>
+      <div class="chips" id="speedChips"></div>
+      <div class="sep"></div>
+      <h3>스피드 트레이너 <span class="spacer"></span><button id="trainerBtn">꺼짐</button></h3>
+      <div class="hint" style="margin-bottom:8px">구간을 N번 반복할 때마다 속도를 올려 목표 속도까지</div>
+      <div class="tr-grid">
+        <label>시작 % <input id="trStart" type="number" inputmode="numeric" min="25" max="200" step="5" value="70"></label>
+        <label>증가 % <input id="trStep" type="number" inputmode="numeric" min="5" max="50" step="5" value="5"></label>
+        <label>매 N회 <input id="trEvery" type="number" inputmode="numeric" min="1" max="20" value="3"></label>
+        <label>목표 % <input id="trTarget" type="number" inputmode="numeric" min="25" max="200" step="5" value="100"></label>
+      </div>
+    </section>
+
+    <section class="card panel" data-panel="metro">
+      <h3>메트로놈 <span class="spacer"></span><span class="hint hover-only"><kbd>M</kbd> 켜기 · <kbd>T</kbd> 탭</span></h3>
+      <div class="bpm-row">
+        <button data-bpm="-1">−</button>
+        <input id="bpmInput" class="mono" type="number" inputmode="decimal" min="20" max="300" step="0.1" value="120" title="원곡 BPM">
+        <button data-bpm="1">＋</button>
+      </div>
+      <div class="bpm-sub">
+        <button data-bpm="-0.1">−0.1</button>
+        <button data-bpm="0.1">＋0.1</button>
+        <button id="halfBpm">÷2</button>
+        <button id="dblBpm">×2</button>
+      </div>
+      <div id="beatDots"></div>
+      <div id="effBpm">실제 클릭 템포 120.0 BPM</div>
+      <div class="row" style="margin-top:10px">
+        <button id="tapBtn" title="T 키로도 탭 가능">TAP</button>
+      </div>
+      <div class="row desk-only" style="margin-top:8px">
+        <button id="metroBtn">메트로놈 켜기</button>
+      </div>
+      <div class="hint" id="tapHint" style="margin-top:6px">영상 재생 중 1박부터 박자에 맞춰 4번 이상 탭하면 BPM과 박 위치가 함께 맞춰져요</div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="detectTab" title="이 탭의 오디오를 분석해 BPM 감지">🎧 BPM 자동 감지</button>
+        <button id="detectMic" class="ghost" title="마이크로 듣고 감지">🎤 마이크로 감지</button>
+      </div>
+      <div class="meter" id="detectMeter"><div></div></div>
+      <div id="detectStatus"></div>
+      <div class="sep"></div>
+      <div class="opt-grid">
+        <label>박자
+          <select id="beatsSel">
+            <option value="1">1</option><option value="2">2/4</option><option value="3">3/4</option>
+            <option value="4" selected>4/4</option><option value="5">5/4</option><option value="6">6/8 (6)</option><option value="7">7/8 (7)</option>
+          </select>
+        </label>
+        <label>쪼개기
+          <select id="subSel">
+            <option value="1">없음</option><option value="2">8분</option><option value="3">셋잇단</option><option value="4">16분</option>
+          </select>
+        </label>
+        <label>소리
+          <select id="soundSel">
+            <option value="beep">비프</option>
+            <option value="wood">우드블록</option>
+            <option value="stick">스틱</option>
+          </select>
+        </label>
+        <label>볼륨
+          <input id="volRange" type="range" min="0" max="100" value="70">
+        </label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label><input type="checkbox" id="accentChk" checked> 첫 박 강세</label>
+        <label><input type="checkbox" id="syncChk" checked> 영상에 동기화</label>
+      </div>
+      <div id="phaseRow">
+        <div class="row" style="margin-top:8px">
+          <button id="downbeatBtn" title="재생 중 1박에서 누르기 (D)">지금이 1박 <kbd class="hover-only">D</kbd></button>
+        </div>
+        <div class="phase-btns">
+          <button data-phase="-0.02">-20ms</button>
+          <button data-phase="-0.005">-5ms</button>
+          <button data-phase="0.005">+5ms</button>
+          <button data-phase="0.02">+20ms</button>
+        </div>
+        <div class="hint" style="margin-top:4px">클릭이 음악보다 빠르면 +, 느리면 −</div>
+      </div>
+    </section>
+
+    <section class="card desk-only hover-only">
+      <h3>단축키</h3>
+      <div class="kbd-list">
+        <span><kbd>Space</kbd></span><span>재생 / 일시정지</span>
+        <span><kbd>[</kbd> <kbd>]</kbd></span><span>현재 위치를 A / B로</span>
+        <span><kbd>L</kbd></span><span>구간 반복 켜기/끄기</span>
+        <span><kbd>Enter</kbd></span><span>A로 돌아가서 재생</span>
+        <span><kbd>←</kbd> <kbd>→</kbd></span><span>2초 이동 (Shift: 0.5초)</span>
+        <span><kbd>↑</kbd> <kbd>↓</kbd></span><span>속도 ±5%</span>
+        <span><kbd>M</kbd> <kbd>T</kbd> <kbd>D</kbd></span><span>메트로놈 · 탭 · 지금이 1박</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<nav class="bottom-bar">
+  <button id="bbToA">⇤<small>A로</small></button>
+  <button id="bbSetA">[A<small>A 지정</small></button>
+  <button id="bbPlay">▶</button>
+  <button id="bbSetB">B]<small>B 지정</small></button>
+  <button id="bbLoop">⟳<small>반복</small></button>
+  <button id="bbMetro">♩<small>메트로놈</small></button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ---------------- storage ---------------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('track0:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('track0:' + k, JSON.stringify(v)); } catch {} },
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  videoId: null, title: '',
+  A: null, B: null, loop: false, reps: 0,
+  bpm: 120, anchor: 0,           // anchor = video time (s) of a bar's beat 1
+  beats: 4, sub: 1, accent: true, sound: 'beep', vol: 0.7,
+  sync: true, metroOn: false,
+  countIn: 0, snap: false,
+  sections: [],
+  trainer: { on: false, start: 70, step: 5, every: 3, target: 100 },
+  rate: 1,
+};
+Object.assign(S, store.get('global', {}));
+S.metroOn = false; S.trainer.on = false;
+
+function saveGlobal() {
+  const { beats, sub, accent, sound, vol, sync, countIn, snap, trainer } = S;
+  store.set('global', { beats, sub, accent, sound, vol, sync, countIn, snap, trainer: { ...trainer, on: false } });
+}
+let saveVideoTimer = 0;
+function saveVideo() {
+  clearTimeout(saveVideoTimer);
+  saveVideoTimer = setTimeout(() => {
+    if (!S.videoId) return;
+    store.set('v:' + S.videoId, { title: S.title, A: S.A, B: S.B, bpm: S.bpm, anchor: S.anchor, sections: S.sections, rate: S.rate });
+  }, 300);
+}
+
+/* ---------------- utils ---------------- */
+function fmt(t, dec = 1) {
+  if (t == null || !isFinite(t)) return '-';
+  const neg = t < 0; t = Math.abs(t);
+  const m = Math.floor(t / 60), s = t - m * 60;
+  const ss = dec ? s.toFixed(dec).padStart(dec + 3, '0') : String(Math.floor(s)).padStart(2, '0');
+  return (neg ? '-' : '') + m + ':' + ss;
+}
+function parseTime(str) {
+  str = String(str).trim(); if (!str) return null;
+  const parts = str.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  return parts.reduce((acc, p) => acc * 60 + p, 0);
+}
+function parseVideo(input) {
+  input = input.trim();
+  if (/^[\w-]{11}$/.test(input)) return { id: input, t: 0 };
+  try {
+    const u = new URL(input.startsWith('http') ? input : 'https://' + input);
+    let id = null;
+    if (u.hostname.includes('youtu.be')) id = u.pathname.slice(1, 12);
+    else if (u.searchParams.get('v')) id = u.searchParams.get('v');
+    else { const m = u.pathname.match(/\/(shorts|embed|live|v)\/([\w-]{11})/); if (m) id = m[2]; }
+    if (!id || !/^[\w-]{11}$/.test(id)) return null;
+    let t = 0; const tp = u.searchParams.get('t') || u.searchParams.get('start');
+    if (tp) { const m = tp.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?/); if (m) t = (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); }
+    return { id, t };
+  } catch { return null; }
+}
+let toastTimer = 0;
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+/* ---------------- YouTube player ---------------- */
+let player = null, playerReady = false, apiReady = false, pending = null;
+window.onYouTubeIframeAPIReady = () => { apiReady = true; if (pending) loadVideo(pending.id, pending.t); };
+(function () { const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s); })();
+
+const YTS = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 };
+function isPlaying() { return playerReady && player.getPlayerState() === YTS.PLAYING; }
+function curTime() { return playerReady ? player.getCurrentTime() || 0 : 0; }
+function duration() { return playerReady ? player.getDuration() || 0 : 0; }
+
+function loadVideo(id, t = 0) {
+  if (!apiReady) { pending = { id, t }; return; }
+  $('#errorMsg').textContent = '';
+  const saved = store.get('v:' + id, null);
+  S.videoId = id; S.reps = 0;
+  S.A = saved?.A ?? null; S.B = saved?.B ?? null; S.loop = false;
+  S.bpm = saved?.bpm ?? 120; S.anchor = saved?.anchor ?? 0;
+  S.sections = saved?.sections ?? []; S.title = saved?.title ?? '';
+  S.rate = saved?.rate ?? 1;
+  const start = t || (S.A ?? 0);
+  if (!player) {
+    player = new YT.Player('player', {
+      videoId: id,
+      playerVars: { playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(start), origin: location.origin },
+      events: {
+        onReady: () => { playerReady = true; $('#placeholder').style.display = 'none'; onVideoLoaded(); },
+        onStateChange: onStateChange,
+        onPlaybackRateChange: e => { S.rate = e.data; renderSpeed(); resetSync(); saveVideo(); },
+        onError: e => {
+          const msgs = { 2: '잘못된 영상 ID입니다.', 5: 'HTML5 재생 오류입니다.', 100: '영상을 찾을 수 없습니다.', 101: '이 영상은 외부 재생(임베드)이 막혀 있어요.', 150: '이 영상은 외부 재생(임베드)이 막혀 있어요.', 153: '플레이어 설정 오류 — http://localhost 로 열어주세요.' };
+          $('#placeholder').style.display = 'flex';
+          $('#errorMsg').textContent = msgs[e.data] || ('재생 오류 ' + e.data);
+        },
+      },
+    });
+  } else {
+    player.cueVideoById({ videoId: id, startSeconds: start });
+    $('#placeholder').style.display = 'none';
+    onVideoLoaded();
+  }
+  history.replaceState(null, '', '#v=' + id);
+  document.body.classList.add('has-video');
+  renderAll();
+}
+function onVideoLoaded() {
+  if (S.rate !== 1) player.setPlaybackRate(S.rate);
+  buildSpeedChips();
+  setTimeout(updateTitle, 1500);
+  renderAll();
+}
+function updateTitle() {
+  if (!playerReady) return;
+  const d = player.getVideoData?.();
+  if (d && d.title) { S.title = d.title; saveVideo(); addRecent(S.videoId, d.title); }
+}
+function onStateChange(e) {
+  const icon = e.data === YTS.PLAYING ? '❚❚' : '▶';
+  $('#playBtn').textContent = icon; $('#bbPlay').textContent = icon;
+  if (e.data === YTS.PLAYING) requestWakeLock(); else releaseWakeLock();
+  if (e.data === YTS.PLAYING) { if (!S.title) updateTitle(); }
+  else resetSync();
+  if (e.data === YTS.ENDED && S.loop && validLoop()) onLoopEnd();
+  if (e.data === YTS.CUED) buildSpeedChips();
+}
+function togglePlay() {
+  if (!playerReady) return;
+  ensureAudio();
+  if (countingIn) { cancelCountIn(); return; }
+  isPlaying() ? player.pauseVideo() : player.playVideo();
+}
+function seek(t) {
+  if (!playerReady) return;
+  if (countingIn) cancelCountIn();
+  t = clamp(t, 0, Math.max(0, duration() - 0.05));
+  player.seekTo(t, true); resetSync(); lastSeekAt = performance.now();
+}
+
+/* recent list */
+function addRecent(id, title) {
+  let r = store.get('recent', []).filter(x => x.id !== id);
+  r.unshift({ id, title }); r = r.slice(0, 8); store.set('recent', r); renderRecent();
+}
+function renderRecent() {
+  const r = store.get('recent', []);
+  const box = $('#recent'); box.innerHTML = '';
+  r.forEach(x => {
+    if (x.id === S.videoId) return;
+    const b = document.createElement('button');
+    b.textContent = '♪ ' + (x.title || x.id); b.title = x.title || x.id;
+    b.onclick = () => { $('#urlInput').value = ''; loadVideo(x.id); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------------- A/B loop ---------------- */
+let lastSeekAt = 0, countingIn = false;
+function validLoop() { return S.A != null && S.B != null && S.B - S.A > 0.05; }
+function beatPeriod() { return 60 / S.bpm; }
+function snapT(t) {
+  if (!S.snap) return t;
+  const p = beatPeriod() / S.sub;
+  return S.anchor + Math.round((t - S.anchor) / p) * p;
+}
+function setA(t) {
+  if (t == null) { S.A = null; } else { S.A = Math.max(0, snapT(t)); if (S.B != null && S.B <= S.A) S.B = null; }
+  saveVideo(); renderLoop();
+}
+function setB(t) {
+  if (t == null) { S.B = null; } else {
+    S.B = snapT(t); const d = duration(); if (d) S.B = Math.min(S.B, d);
+    if (S.A != null && S.B <= S.A) { const a = S.B; S.B = S.A; S.A = a; }
+    if (S.A == null) S.A = 0;
+  }
+  saveVideo(); renderLoop();
+}
+function setLoop(on) {
+  if (on && !validLoop()) { toast('A와 B를 먼저 지정하세요'); on = false; }
+  S.loop = on; S.reps = 0;
+  if (!on && countingIn) { cancelCountIn(); }
+  if (on && playerReady) { const t = curTime(); if (t < S.A || t > S.B) seek(S.A); }
+  renderLoop();
+}
+function onLoopEnd() {
+  S.reps++;
+  trainerOnRep();
+  lastSeekAt = performance.now();
+  if (S.countIn > 0) {
+    player.seekTo(S.A, true); player.pauseVideo(); resetSync();
+    runCountIn(() => player.playVideo());
+  } else {
+    player.seekTo(S.A, true); resetSync();
+    if (player.getPlayerState() !== YTS.PLAYING) player.playVideo();
+  }
+  renderLoop();
+}
+function goToA() {
+  if (!playerReady) return;
+  ensureAudio();
+  const target = S.A ?? 0;
+  if (S.countIn > 0 && validLoop()) {
+    seek(target); player.pauseVideo(); runCountIn(() => player.playVideo());
+  } else { seek(target); player.playVideo(); }
+}
+let countInTimers = [];
+function runCountIn(done) {
+  ensureAudio();
+  cancelCountIn();
+  countingIn = true;
+  const n = S.beats * S.countIn;
+  const p = 60 / (S.bpm * S.rate);
+  const t0 = actx.currentTime + 0.12;
+  const ov = $('#countInOverlay');
+  const later = (fn, at) => countInTimers.push(setTimeout(fn, Math.max(0, (at - actx.currentTime) * 1000)));
+  for (let i = 0; i < n; i++) {
+    const at = t0 + i * p;
+    later(() => { playClick(at, i % S.beats === 0 ? 0 : 1); queueVisual(at, i % S.beats, true); }, at - 0.06);
+    later(() => { ov.style.display = 'flex'; ov.textContent = (i % S.beats) + 1; }, at);
+  }
+  later(() => { ov.style.display = 'none'; countingIn = false; countInTimers = []; done(); }, t0 + n * p - 0.06);
+}
+function cancelCountIn() {
+  countInTimers.forEach(clearTimeout); countInTimers = [];
+  countingIn = false; $('#countInOverlay').style.display = 'none';
+}
+
+/* sections */
+function saveSection() {
+  if (!validLoop()) { toast('A와 B를 먼저 지정하세요'); return; }
+  const name = prompt('구간 이름 (예: 인트로 리프, 솔로 1)', '구간 ' + (S.sections.length + 1));
+  if (name == null) return;
+  S.sections.push({ name: name || '구간', A: S.A, B: S.B });
+  S.sections.sort((x, y) => x.A - y.A);
+  saveVideo(); renderSections();
+}
+function renderSections() {
+  const box = $('#sections'); box.innerHTML = '';
+  S.sections.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'sec' + (Math.abs(s.A - S.A) < 0.01 && Math.abs(s.B - S.B) < 0.01 ? ' active' : '');
+    el.innerHTML = `<span class="nm"></span><span class="tm mono">${fmt(s.A)} – ${fmt(s.B)}</span><button title="이름 변경">✎</button><button title="삭제">✕</button>`;
+    el.querySelector('.nm').textContent = s.name;
+    el.onclick = () => { S.A = s.A; S.B = s.B; saveVideo(); setLoop(true); seek(S.A); renderLoop(); };
+    const [ren, del] = el.querySelectorAll('button');
+    ren.onclick = e => { e.stopPropagation(); const n = prompt('구간 이름', s.name); if (n) { s.name = n; saveVideo(); renderSections(); } };
+    del.onclick = e => { e.stopPropagation(); S.sections.splice(i, 1); saveVideo(); renderSections(); };
+    box.appendChild(el);
+  });
+}
+
+/* ---------------- speed ---------------- */
+function setRate(r) {
+  r = Math.round(clamp(r, 0.25, 2) * 100) / 100;
+  if (playerReady) player.setPlaybackRate(r);
+  S.rate = r; renderSpeed(); resetSync(); saveVideo();
+}
+function buildSpeedChips() {
+  const box = $('#speedChips'); box.innerHTML = '';
+  [0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 1].forEach(r => {
+    const b = document.createElement('button'); b.textContent = Math.round(r * 100) + '%'; b.dataset.r = r;
+    b.onclick = () => setRate(r); box.appendChild(b);
+  });
+  renderSpeed();
+}
+function renderSpeed() {
+  $('#speedVal').textContent = Math.round(S.rate * 100) + '%';
+  $('#speedRange').value = Math.round(S.rate * 100);
+  $$('#speedChips button').forEach(b => b.classList.toggle('on', Math.abs(+b.dataset.r - S.rate) < 0.001));
+  renderMetroInfo();
+}
+function trainerOnRep() {
+  const T = S.trainer; if (!T.on) return;
+  if (S.reps % T.every === 0 && S.rate * 100 < T.target - 0.1) {
+    const next = Math.min(T.target, Math.round(S.rate * 100) + T.step) / 100;
+    setRate(next); toast('속도 ' + Math.round(next * 100) + '% 로 올림');
+  }
+}
+
+/* ---------------- audio / metronome ---------------- */
+let actx = null, master = null, noiseBuf = null;
+function ensureAudio() {
+  if (!actx) {
+    actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = actx.createGain(); master.gain.value = S.vol; master.connect(actx.destination);
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.1, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  // iOS: 무음 스위치가 켜져 있어도 메트로놈 소리가 나도록
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+// kind: 0 = 첫 박(강세), 1 = 일반 박, 2 = 쪼갠 박
+function playClick(t, kind) {
+  if (!actx || muteClicks) return;
+  if (kind === 0 && !S.accent) kind = 1;
+  t = Math.max(t, actx.currentTime);
+  const g = actx.createGain(); g.connect(master);
+  const vol = [1, 0.62, 0.3][kind];
+  if (S.sound === 'beep') {
+    const o = actx.createOscillator(); o.type = 'triangle';
+    o.frequency.value = [1760, 1175, 880][kind];
+    o.connect(g);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 0.07);
+    o.start(t); o.stop(t + 0.08);
+  } else {
+    const n = actx.createBufferSource(); n.buffer = noiseBuf;
+    const f = actx.createBiquadFilter();
+    if (S.sound === 'wood') { f.type = 'bandpass'; f.frequency.value = [2600, 1800, 1500][kind]; f.Q.value = 9; }
+    else { f.type = 'highpass'; f.frequency.value = [3000, 5000, 7000][kind]; }
+    n.connect(f); f.connect(g);
+    const len = S.sound === 'wood' ? 0.05 : 0.025;
+    const amp = S.sound === 'wood' ? vol * 4 : vol * 1.4;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + 0.0008);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + len);
+    n.start(t); n.stop(t + len + 0.01);
+    if (S.sound === 'wood') { // 몸통 울림
+      const o = actx.createOscillator(); o.frequency.value = [1250, 900, 760][kind];
+      const og = actx.createGain(); o.connect(og); og.connect(master);
+      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(vol * 0.6, t + 0.001);
+      og.gain.exponentialRampToValueAtTime(0.0008, t + 0.04); o.start(t); o.stop(t + 0.05);
+    }
+  }
+}
+
+// visual beat queue
+const visQ = [];
+function queueVisual(t, beatInBar, main) { if (main) visQ.push({ t, b: beatInBar }); }
+
+/* 동기화 모드: 영상 시간 → 오디오 시간 매핑 모델 */
+let model = null, lastTick = null, lastRawVt = -1, freeNext = 0, freeTick = 0, muteClicks = false;
+function resetSync() { model = null; lastTick = null; }
+function tickLen() { return 60 / S.bpm / S.sub; }
+function tickKind(k) {
+  const perBar = S.sub * S.beats;
+  const m = ((k % perBar) + perBar) % perBar;
+  return m === 0 ? 0 : (m % S.sub === 0 ? 1 : 2);
+}
+function scheduleSync(vt, rate) {
+  const now = actx.currentTime;
+  if (!model || model.rate !== rate) { model = { v0: vt, a0: now, rate }; lastTick = null; lastRawVt = vt; }
+  else if (vt !== lastRawVt) {           // getCurrentTime이 새 값을 줄 때만 보정
+    lastRawVt = vt;
+    const pred = model.v0 + (now - model.a0) * rate;
+    const err = vt - pred;
+    if (Math.abs(err) > 0.3) { model = { v0: vt, a0: now, rate }; lastTick = null; }
+    else model.v0 += err * 0.15;
+  }
+  const pred = model.v0 + (now - model.a0) * rate;
+  const L = tickLen();
+  if (lastTick == null) lastTick = Math.ceil((pred - S.anchor) / L - 0.15) - 1;
+  const horizon = now + 0.15;
+  for (let k = lastTick + 1; ; k++) {
+    const bt = S.anchor + k * L;
+    const at = now + (bt - pred) / rate;
+    if (at > horizon) break;
+    lastTick = k;
+    if (at < now - 0.03) continue;
+    if (S.loop && validLoop() && bt >= S.B - 0.005) continue;   // 구간 끝 넘어가는 클릭은 생략
+    const kind = tickKind(k);
+    playClick(at, kind);
+    if (kind !== 2) queueVisual(at, (((Math.round(k / S.sub)) % S.beats) + S.beats) % S.beats, true);
+  }
+}
+function scheduleFree() {
+  const now = actx.currentTime;
+  if (freeNext < now) { freeNext = now + 0.05; }
+  const L = 60 / (S.bpm * S.rate) / S.sub;
+  while (freeNext < now + 0.12) {
+    const kind = tickKind(freeTick);
+    playClick(freeNext, kind);
+    if (kind !== 2) queueVisual(freeNext, Math.floor(freeTick / S.sub) % S.beats, true);
+    freeNext += L; freeTick++;
+  }
+}
+function setMetro(on) {
+  if (on) ensureAudio();
+  S.metroOn = on;
+  freeNext = 0; freeTick = 0; resetSync();
+  const b = $('#metroBtn');
+  b.textContent = on ? '메트로놈 끄기' : '메트로놈 켜기';
+  b.classList.toggle('on', on);
+  $('#bbMetro').classList.toggle('on', on);
+}
+
+/* ---------------- main loop ---------------- */
+setInterval(() => {
+  if (playerReady) {
+    const st = player.getPlayerState();
+    const vt = curTime();
+    // 카운트인 동안은 영상을 붙잡아 둠 (seekTo가 정지 상태의 영상을 재생시키는 경우가 있음)
+    if (countingIn && (st === YTS.PLAYING || st === YTS.BUFFERING)) player.pauseVideo();
+    if (S.loop && validLoop() && st === YTS.PLAYING && !countingIn && performance.now() - lastSeekAt > 350) {
+      if (vt >= S.B - 0.02) onLoopEnd();
+    }
+    if (actx && S.metroOn && S.sync && st === YTS.PLAYING && !countingIn && performance.now() - lastSeekAt > 150) scheduleSync(vt, S.rate);
+  }
+  if (actx && S.metroOn && !S.sync) scheduleFree();
+}, 20);
+
+function frame() {
+  if (actx) {
+    let lit = null;
+    while (visQ.length && visQ[0].t <= actx.currentTime) lit = visQ.shift();
+    if (lit) {
+      $$('.dot').forEach((d, i) => d.classList.toggle('lit', i === lit.b));
+      clearTimeout(frame.off); frame.off = setTimeout(() => $$('.dot').forEach(d => d.classList.remove('lit')), 110);
+    }
+  }
+  if (playerReady) {
+    const t = curTime(), d = duration();
+    $('#timeDisp').textContent = fmt(t) + ' / ' + fmt(d, 0);
+    renderTimeline(t, d);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- tap tempo ---------------- */
+let taps = [];
+function tap() {
+  ensureAudio();
+  const now = performance.now();
+  if (taps.length && now - taps[taps.length - 1].real > 2000) taps = [];
+  const playing = isPlaying();
+  const vt = playing && model ? model.v0 + (actx.currentTime - model.a0) * S.rate : (playing ? curTime() : null);
+  taps.push({ real: now, vt });
+  const btn = $('#tapBtn'); btn.classList.add('on'); setTimeout(() => btn.classList.remove('on'), 80);
+  if (taps.length < 2) { btn.textContent = 'TAP · 1'; return; }
+  const recent = taps.slice(-16);
+  let bpm;
+  const useVideo = recent.every(x => x.vt != null);
+  if (useVideo) {
+    // 영상 시간 기준 직선 회귀 → 원곡 BPM과 박 위치(첫 탭 = 1박)를 함께 얻음
+    const n = recent.length, offs = taps.length - n;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    recent.forEach((p, i) => { const x = i + offs; sx += x; sy += p.vt; sxx += x * x; sxy += x * p.vt; });
+    const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    const icpt = (sy - slope * sx) / n;
+    if (slope > 0.15 && slope < 3) {
+      bpm = 60 / slope;
+      if (taps.length >= 4) { S.anchor = icpt; resetSync(); }
+    }
+  } else {
+    const iv = []; for (let i = 1; i < recent.length; i++) iv.push(recent[i].real - recent[i - 1].real);
+    const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
+    bpm = 60000 / mean / (playerReady ? S.rate : 1);
+  }
+  btn.textContent = 'TAP · ' + taps.length;
+  if (bpm) setBpm(Math.round(bpm * 10) / 10, true);
+}
+function downbeatNow() {
+  if (!isPlaying()) { toast('재생 중에 1박에서 눌러주세요'); return; }
+  ensureAudio();
+  const vt = model ? model.v0 + (actx.currentTime - model.a0) * S.rate : curTime();
+  const p = beatPeriod();
+  const k = Math.round((vt - S.anchor) / p);
+  S.anchor += k * p;
+  // 박 그리드가 안 맞을 정도로 멀면 탭 위치 자체를 1박으로
+  if (Math.abs(vt - S.anchor) > p * 0.25) S.anchor = vt;
+  resetSync(); saveVideo(); toast('1박 위치 맞춤');
+}
+function setBpm(b, keepTaps) {
+  b = clamp(+b || 120, 20, 300);
+  // BPM 변경 시 현재 위치 근처의 박을 기준으로 앵커 유지
+  if (playerReady && S.sync) {
+    const vt = curTime(), oldP = 60 / S.bpm;
+    const k = Math.round((vt - S.anchor) / oldP);
+    const pivot = S.anchor + k * oldP;
+    const kk = ((k % S.beats) + S.beats) % S.beats;
+    S.bpm = b;
+    if (!keepTaps) S.anchor = pivot - kk * (60 / b);
+  } else S.bpm = b;
+  if (!keepTaps) taps = [];
+  resetSync(); saveVideo(); renderMetroInfo();
+  if (document.activeElement !== $('#bpmInput')) $('#bpmInput').value = S.bpm;
+}
+
+/* ---------------- BPM detection ---------------- */
+async function detectBpm(source) {
+  ensureAudio();
+  const status = $('#detectStatus'), meter = $('#detectMeter');
+  let stream;
+  try {
+    if (source === 'tab') {
+      if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('이 브라우저는 탭 오디오 캡처를 지원하지 않아요. 마이크를 이용하세요.');
+      status.textContent = '공유 창에서 "이 탭"을 고르고 "탭 오디오 공유"를 켜주세요';
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true, preferCurrentTab: true, selfBrowserSurface: 'include', systemAudio: 'include',
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    }
+  } catch (e) { status.textContent = e.name === 'NotAllowedError' ? '권한이 거부되었어요.' : (e.message || String(e)); return; }
+  const tracks = stream.getAudioTracks();
+  if (!tracks.length) { stream.getTracks().forEach(t => t.stop()); status.textContent = '오디오가 공유되지 않았어요. "탭 오디오 공유"를 체크해 주세요.'; return; }
+  stream.getVideoTracks().forEach(t => t.stop());
+
+  if (playerReady && !isPlaying()) player.playVideo();
+  const DUR = 12;
+  const src = actx.createMediaStreamSource(new MediaStream(tracks));
+  const proc = actx.createScriptProcessor(4096, 1, 1);
+  const sink = actx.createGain(); sink.gain.value = 0;
+  const chunks = []; let vt0 = null, rate0 = S.rate, got = 0;
+  const sr = actx.sampleRate;
+  muteClicks = source === 'mic';
+  proc.onaudioprocess = e => {
+    if (!isPlaying()) return;   // 재생 중인 구간만 수집
+    const d = e.inputBuffer.getChannelData(0);
+    if (vt0 == null) { vt0 = curTime() - (d.length / sr) * S.rate; rate0 = S.rate; }
+    chunks.push(new Float32Array(d)); got += d.length;
+  };
+  src.connect(proc); proc.connect(sink); sink.connect(actx.destination);
+  meter.style.display = 'block';
+  status.textContent = (source === 'tab' ? '탭 오디오' : '마이크') + '로 듣는 중… (' + DUR + '초)';
+  await new Promise(res => {
+    const iv = setInterval(() => {
+      meter.firstElementChild.style.width = Math.min(100, got / sr / DUR * 100) + '%';
+      if (got >= sr * DUR) { clearInterval(iv); res(); }
+    }, 200);
+  });
+  proc.disconnect(); src.disconnect(); sink.disconnect(); tracks.forEach(t => t.stop());
+  muteClicks = false;
+  meter.style.display = 'none';
+  const x = new Float32Array(got); let o = 0; chunks.forEach(c => { x.set(c, o); o += c.length; });
+  let peak = 0; for (let i = 0; i < x.length; i += 64) peak = Math.max(peak, Math.abs(x[i]));
+  if (peak < 0.003) { status.textContent = '소리가 거의 안 들려요. 영상이 재생 중인지, 오디오 공유가 켜졌는지 확인해 주세요.'; return; }
+  status.textContent = '분석 중…';
+  await new Promise(r => setTimeout(r, 20));
+  const res = analyzeTempo(x, sr);
+  if (!res) { status.textContent = '박을 찾지 못했어요. 탭으로 맞춰 주세요.'; return; }
+  const orig = Math.round(res.bpm / rate0 * 10) / 10;
+  S.bpm = orig; $('#bpmInput').value = orig;
+  if (vt0 != null) {
+    S.anchor = vt0 + res.phase * rate0;   // 박 위치(1박은 정확하지 않을 수 있음)
+  }
+  taps = []; resetSync(); saveVideo(); renderMetroInfo();
+  status.textContent = `감지된 BPM: ${orig} (신뢰도 ${res.conf}) — 반/두 배로 들리면 ÷2·×2, 1박은 "지금이 1박"으로 맞추세요`;
+  if (!S.metroOn) setMetro(true);
+}
+
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+function analyzeTempo(x, sr) {
+  // 1) ~11kHz로 다운샘플
+  const dec = Math.max(1, Math.round(sr / 11025)), fs = sr / dec;
+  const y = new Float32Array(Math.floor(x.length / dec));
+  for (let i = 0; i < y.length; i++) { let s = 0; for (let j = 0; j < dec; j++) s += x[i * dec + j]; y[i] = s / dec; }
+  // 2) 스펙트럴 플럭스 onset envelope
+  const N = 1024, H = 128, fr = fs / H;
+  const win = new Float32Array(N); for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+  const frames = Math.floor((y.length - N) / H);
+  if (frames < fr * 5) return null;
+  const re = new Float32Array(N), im = new Float32Array(N);
+  let prev = new Float32Array(N / 2), cur = new Float32Array(N / 2);
+  const env = new Float32Array(frames);
+  for (let f = 0; f < frames; f++) {
+    for (let i = 0; i < N; i++) { re[i] = y[f * H + i] * win[i]; im[i] = 0; }
+    fft(re, im);
+    let flux = 0;
+    for (let k = 1; k < N / 2; k++) {
+      const m = Math.log1p(100 * Math.hypot(re[k], im[k]));
+      cur[k] = m; const d = m - prev[k]; if (d > 0) flux += d;
+    }
+    env[f] = f ? flux : 0;
+    [prev, cur] = [cur, prev];
+  }
+  // 3) 국소 평균 빼고 반파 정류
+  const w = Math.round(fr * 0.4), o = new Float32Array(frames);
+  let acc = 0;
+  for (let i = 0; i < frames; i++) {
+    acc += env[i]; if (i >= w) acc -= env[i - w];
+    const mean = acc / Math.min(i + 1, w);
+    o[Math.max(0, i - (w >> 1))] = Math.max(0, env[Math.max(0, i - (w >> 1))] - mean);
+  }
+  // 4) 자기상관
+  const maxLag = Math.ceil(fr * 60 / 30) + 2;
+  const r = new Float32Array(maxLag + 1);
+  for (let L = 1; L <= maxLag; L++) { let s = 0; for (let i = L; i < frames; i++) s += o[i] * o[i - L]; r[L] = s / (frames - L); }
+  const rAt = l => { if (l >= maxLag) return 0; const i = Math.floor(l), f = l - i; return r[i] * (1 - f) + r[i + 1] * f; };
+  let best = 0, bestScore = -1, scores = [];
+  for (let b = 60; b <= 200; b += 0.05) {
+    const L = fr * 60 / b;
+    const sc = (rAt(L) + 0.5 * rAt(2 * L) + 0.25 * rAt(4 * L) + 0.25 * rAt(L / 2)) * Math.exp(-0.5 * Math.pow(Math.log2(b / 110) / 1.2, 2));
+    scores.push(sc);
+    if (sc > bestScore) { bestScore = sc; best = b; }
+  }
+  if (bestScore <= 0) return null;
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const conf = bestScore / mean > 2.2 ? '높음' : bestScore / mean > 1.5 ? '보통' : '낮음';
+  // 5) 박 위상 + BPM 미세 보정 (전체 구간에 박 격자를 대보며 가장 잘 맞는 값)
+  const comb = (P, phi) => {
+    let s = 0, n = 0;
+    for (let t = phi; t < frames - 1; t += P) { const i = Math.floor(t), f = t - i; s += o[i] * (1 - f) + o[i + 1] * f; n++; }
+    return s / n;
+  };
+  let bestPhi = 0, bestPS = -1;
+  for (let b = best - 1.5; b <= best + 1.5; b += 0.02) {
+    const P = fr * 60 / b;
+    for (let phi = 0; phi < P; phi += 0.25) {
+      const s = comb(P, phi);
+      if (s > bestPS) { bestPS = s; bestPhi = phi; best = b; }
+    }
+  }
+  // 플럭스 프레임은 창 시작 위치 기준이라 실제 onset보다 앞섬 (합성 클릭으로 측정: 약 3N/4)
+  const phase = bestPhi / fr + (N * 0.75) / fs;
+  return { bpm: Math.round(best * 10) / 10, phase, conf };
+}
+
+/* ---------------- timeline ---------------- */
+let zoom = 'all';
+function viewRange(d) {
+  if (zoom === 'loop' && validLoop()) {
+    const pad = Math.max(1.5, (S.B - S.A) * 0.15);
+    return [Math.max(0, S.A - pad), Math.min(d || S.B + pad, S.B + pad)];
+  }
+  return [0, d || 1];
+}
+const tlEl = $('#timeline'), canvas = $('#tlCanvas');
+let lastCanvasKey = '';
+function renderTimeline(t, d) {
+  const [v0, v1] = viewRange(d), span = v1 - v0 || 1;
+  const pct = x => ((x - v0) / span * 100) + '%';
+  $('#tlHead').style.left = pct(clamp(t, v0, v1));
+  const reg = $('#tlRegion'), hA = $('#hA'), hB = $('#hB');
+  if (S.A != null) { hA.style.display = 'block'; hA.style.left = pct(S.A); } else hA.style.display = 'none';
+  if (S.B != null) { hB.style.display = 'block'; hB.style.left = pct(S.B); } else hB.style.display = 'none';
+  if (S.A != null && S.B != null) {
+    reg.style.display = 'block'; reg.style.left = pct(S.A); reg.style.width = ((S.B - S.A) / span * 100) + '%';
+  } else reg.style.display = 'none';
+  reg.classList.toggle('off', !S.loop); hA.classList.toggle('off', !S.loop); hB.classList.toggle('off', !S.loop);
+  $('#tlStart').textContent = fmt(v0, zoom === 'loop' ? 1 : 0);
+  $('#tlEnd').textContent = fmt(v1, zoom === 'loop' ? 1 : 0);
+  // 박 그리드 (확대 시)
+  const key = [v0, v1, S.bpm, S.anchor, S.beats, tlEl.clientWidth].join('|');
+  if (key !== lastCanvasKey) {
+    lastCanvasKey = key;
+    const dpr = window.devicePixelRatio || 1, W = tlEl.clientWidth, Hh = tlEl.clientHeight;
+    canvas.width = W * dpr; canvas.height = Hh * dpr;
+    const c = canvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, Hh);
+    const p = 60 / S.bpm;
+    if (span / p < W / 6) {
+      const k0 = Math.ceil((v0 - S.anchor) / p), k1 = Math.floor((v1 - S.anchor) / p);
+      for (let k = k0; k <= k1; k++) {
+        const x = ((S.anchor + k * p) - v0) / span * W;
+        const bar = ((k % S.beats) + S.beats) % S.beats === 0;
+        c.fillStyle = bar ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)';
+        c.fillRect(Math.round(x), bar ? 0 : Hh * 0.55, 1, bar ? Hh : Hh * 0.45);
+      }
+    }
+  }
+}
+function tlTime(ev) {
+  const r = tlEl.getBoundingClientRect();
+  const [v0, v1] = viewRange(duration());
+  return v0 + clamp((ev.clientX - r.left) / r.width, 0, 1) * (v1 - v0);
+}
+let drag = null;
+tlEl.addEventListener('pointerdown', ev => {
+  if (!playerReady) return;
+  ensureAudio();
+  tlEl.setPointerCapture(ev.pointerId);
+  const id = ev.target.id;
+  drag = { mode: id === 'hA' ? 'A' : id === 'hB' ? 'B' : 'new', x0: ev.clientX, t0: tlTime(ev), moved: false };
+});
+tlEl.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (Math.abs(ev.clientX - drag.x0) > 4) drag.moved = true;
+  if (!drag.moved) return;
+  const t = tlTime(ev);
+  if (drag.mode === 'A') { S.A = clamp(snapT(t), 0, (S.B ?? Infinity) - 0.05); }
+  else if (drag.mode === 'B') { S.B = Math.max(snapT(t), (S.A ?? 0) + 0.05); }
+  else { const a = Math.min(drag.t0, t), b = Math.max(drag.t0, t); S.A = snapT(a); S.B = snapT(b); }
+  renderLoopInputs();
+});
+tlEl.addEventListener('pointerup', ev => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (!d.moved) { seek(tlTime(ev)); return; }
+  if (d.mode === 'new' && validLoop()) { setLoop(true); seek(S.A); }
+  saveVideo(); renderLoop();
+});
+
+/* ---------------- render ---------------- */
+function renderLoopInputs() {
+  if (document.activeElement !== $('#aInput')) $('#aInput').value = S.A == null ? '' : fmt(S.A, 2);
+  if (document.activeElement !== $('#bInput')) $('#bInput').value = S.B == null ? '' : fmt(S.B, 2);
+}
+function renderLoop() {
+  renderLoopInputs();
+  const lb = $('#loopBtn');
+  lb.textContent = S.loop ? '⟳ 반복 켜짐' : '⟳ 반복 꺼짐';
+  lb.classList.toggle('on', S.loop);
+  $('#bbLoop').classList.toggle('on', S.loop);
+  $('#repCount').textContent = '반복 ' + S.reps + '회' + (validLoop() ? ` · 길이 ${(S.B - S.A).toFixed(2)}s` : '');
+  renderSections();
+  lastCanvasKey = '';
+}
+function renderDots() {
+  const box = $('#beatDots'); box.innerHTML = '';
+  for (let i = 0; i < S.beats; i++) { const d = document.createElement('div'); d.className = 'dot' + (i === 0 && S.accent ? ' first' : ''); box.appendChild(d); }
+}
+function renderMetroInfo() {
+  const eff = S.bpm * S.rate;
+  $('#effBpm').textContent = `실제 클릭 템포 ${eff.toFixed(1)} BPM` + (S.rate !== 1 ? ` (원곡 ${S.bpm} × ${Math.round(S.rate * 100)}%)` : '');
+  $('#phaseRow').style.opacity = S.sync ? 1 : 0.4;
+  lastCanvasKey = '';
+}
+function renderTrainer() {
+  const T = S.trainer, b = $('#trainerBtn');
+  b.textContent = T.on ? '켜짐' : '꺼짐'; b.classList.toggle('on', T.on);
+  $('#trStart').value = T.start; $('#trStep').value = T.step; $('#trEvery').value = T.every; $('#trTarget').value = T.target;
+}
+function renderAll() {
+  $('#bpmInput').value = S.bpm;
+  $('#beatsSel').value = S.beats; $('#subSel').value = S.sub;
+  $('#accentChk').checked = S.accent; $('#soundSel').value = S.sound;
+  $('#volRange').value = Math.round(S.vol * 100);
+  $('#syncChk').checked = S.sync; $('#snapChk').checked = S.snap;
+  $('#countInSel').value = S.countIn;
+  renderDots(); renderLoop(); renderSpeed(); renderTrainer(); renderRecent();
+}
+
+/* ---------------- events ---------------- */
+$('#urlForm').addEventListener('submit', e => {
+  e.preventDefault(); ensureAudio();
+  const v = parseVideo($('#urlInput').value);
+  if (!v) { toast('YouTube 링크를 인식하지 못했어요'); return; }
+  $('#urlInput').blur();
+  loadVideo(v.id, v.t);
+});
+$('#playBtn').onclick = togglePlay;
+$('#back5').onclick = () => seek(curTime() - 5);
+$('#fwd5').onclick = () => seek(curTime() + 5);
+$('#toA').onclick = goToA;
+$('#setA').onclick = () => setA(curTime());
+$('#setB').onclick = () => setB(curTime());
+$('#clearAB').onclick = () => { S.A = S.B = null; setLoop(false); saveVideo(); };
+$('#loopBtn').onclick = () => { ensureAudio(); setLoop(!S.loop); };
+$$('[data-nudge]').forEach(b => b.onclick = () => {
+  const which = b.dataset.nudge, d = +b.dataset.d;
+  if (which === 'A') { if (S.A == null) return; S.A = clamp(S.A + d, 0, (S.B ?? Infinity) - 0.05); }
+  else { if (S.B == null) return; S.B = Math.max(S.B + d, (S.A ?? 0) + 0.05); }
+  saveVideo(); renderLoop();
+  if (S.loop && which === 'A') seek(S.A);
+});
+$('#aInput').onchange = e => { const t = parseTime(e.target.value); if (t != null) { S.A = t; if (S.B != null && S.B <= S.A) S.B = null; } saveVideo(); e.target.blur(); renderLoop(); };
+$('#bInput').onchange = e => { const t = parseTime(e.target.value); if (t != null && (S.A == null || t > S.A)) S.B = t; saveVideo(); e.target.blur(); renderLoop(); };
+$('#snapChk').onchange = e => { S.snap = e.target.checked; saveGlobal(); };
+$('#countInSel').onchange = e => { S.countIn = +e.target.value; saveGlobal(); };
+$('#saveSec').onclick = saveSection;
+$('#zoomAll').onclick = () => { zoom = 'all'; $('#zoomAll').classList.add('on'); $('#zoomLoop').classList.remove('on'); lastCanvasKey = ''; };
+$('#zoomLoop').onclick = () => { if (!validLoop()) { toast('A/B 구간이 있어야 확대할 수 있어요'); return; } zoom = 'loop'; $('#zoomLoop').classList.add('on'); $('#zoomAll').classList.remove('on'); lastCanvasKey = ''; };
+
+$('#speedRange').oninput = e => setRate(+e.target.value / 100);
+$('#trainerBtn').onclick = () => {
+  const T = S.trainer; T.on = !T.on;
+  if (T.on) {
+    if (!validLoop()) { toast('트레이너는 구간 반복과 함께 써요 — A/B를 지정하세요'); T.on = false; }
+    else { setRate(T.start / 100); S.reps = 0; setLoop(true); toast(`${T.start}%부터 시작 · ${T.every}회마다 +${T.step}%`); }
+  }
+  renderTrainer(); saveGlobal();
+};
+['trStart', 'trStep', 'trEvery', 'trTarget'].forEach(id => $('#' + id).onchange = e => {
+  const k = { trStart: 'start', trStep: 'step', trEvery: 'every', trTarget: 'target' }[id];
+  S.trainer[k] = Math.max(1, +e.target.value || 1); saveGlobal();
+});
+
+$('#bpmInput').onchange = e => setBpm(+e.target.value);
+$$('[data-bpm]').forEach(b => b.onclick = () => setBpm(Math.round((S.bpm + +b.dataset.bpm) * 10) / 10));
+$('#halfBpm').onclick = () => setBpm(Math.round(S.bpm / 2 * 10) / 10);
+$('#dblBpm').onclick = () => setBpm(Math.round(S.bpm * 2 * 10) / 10);
+$('#tapBtn').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
+$('#downbeatBtn').onclick = downbeatNow;
+$$('[data-phase]').forEach(b => b.onclick = () => { S.anchor += +b.dataset.phase; resetSync(); saveVideo(); lastCanvasKey = ''; });
+$('#beatsSel').onchange = e => { S.beats = +e.target.value; renderDots(); resetSync(); saveGlobal(); lastCanvasKey = ''; };
+$('#subSel').onchange = e => { S.sub = +e.target.value; resetSync(); saveGlobal(); };
+$('#accentChk').onchange = e => { S.accent = e.target.checked; renderDots(); saveGlobal(); };
+$('#soundSel').onchange = e => { S.sound = e.target.value; saveGlobal(); ensureAudio(); playClick(actx.currentTime + 0.02, 0); };
+$('#volRange').oninput = e => { S.vol = +e.target.value / 100; if (master) master.gain.value = S.vol; saveGlobal(); };
+$('#syncChk').onchange = e => { S.sync = e.target.checked; setMetro(S.metroOn); renderMetroInfo(); saveGlobal(); };
+$('#metroBtn').onclick = () => setMetro(!S.metroOn);
+
+/* 모바일: 하단 바 · 탭 */
+$('#bbPlay').onclick = togglePlay;
+$('#bbToA').onclick = goToA;
+$('#bbSetA').onclick = () => { if (!playerReady) return; setA(curTime()); toast('A = ' + fmt(S.A, 2)); };
+$('#bbSetB').onclick = () => { if (!playerReady) return; setB(curTime()); if (validLoop() && !S.loop) setLoop(true); toast('B = ' + fmt(S.B, 2)); };
+$('#bbLoop').onclick = () => { ensureAudio(); setLoop(!S.loop); };
+$('#bbMetro').onclick = () => setMetro(!S.metroOn);
+$('#speedUp').onclick = () => setRate(S.rate + 0.05);
+$('#speedDown').onclick = () => setRate(S.rate - 0.05);
+function setTab(t) {
+  document.body.dataset.tab = t;
+  $$('#tabs button').forEach(b => b.classList.toggle('cur', b.dataset.tab === t));
+  store.set('tab', t);
+}
+$$('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+setTab(store.get('tab', 'loop'));
+
+/* 연습 중 화면 꺼짐 방지 */
+let wakeLock = null;
+async function requestWakeLock() {
+  try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch {}
+}
+function releaseWakeLock() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && isPlaying()) requestWakeLock(); });
+
+/* 기기별 차이: 탭 오디오 캡처는 PC 크롬/엣지에서만 가능 */
+const canCaptureTab = !!navigator.mediaDevices?.getDisplayMedia && !matchMedia('(pointer: coarse)').matches;
+if (!canCaptureTab) { $('#detectTab').style.display = 'none'; $('#detectMic').classList.remove('ghost'); $('#detectMic').textContent = '🎤 BPM 자동 감지 (마이크)'; }
+if (matchMedia('(hover: hover)').matches) $('#tlHint').textContent = '클릭: 이동 · 드래그: 구간 지정 · 핸들: A/B 조정';
+$('#detectTab').onclick = () => detectBpm('tab');
+$('#detectMic').onclick = () => detectBpm('mic');
+
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName;
+  if ((tag === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'range') || tag === 'SELECT' || tag === 'TEXTAREA') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  const handled = () => e.preventDefault();
+  if (k === ' ') { handled(); togglePlay(); }
+  else if (k === '[') { handled(); setA(curTime()); }
+  else if (k === ']') { handled(); setB(curTime()); }
+  else if (k === 'l' || k === 'L') { handled(); ensureAudio(); setLoop(!S.loop); }
+  else if (k === 'Enter') { handled(); goToA(); }
+  else if (k === 'ArrowLeft') { handled(); seek(curTime() - (e.shiftKey ? 0.5 : 2)); }
+  else if (k === 'ArrowRight') { handled(); seek(curTime() + (e.shiftKey ? 0.5 : 2)); }
+  else if (k === 'ArrowUp') { handled(); setRate(S.rate + 0.05); }
+  else if (k === 'ArrowDown') { handled(); setRate(S.rate - 0.05); }
+  else if (k === 'm' || k === 'M') { handled(); setMetro(!S.metroOn); }
+  else if (k === 't' || k === 'T') { handled(); tap(); }
+  else if (k === 'd' || k === 'D') { handled(); downbeatNow(); }
+});
+window.addEventListener('resize', () => { lastCanvasKey = ''; });
+// 유튜브 영상을 클릭하면 키보드 포커스가 iframe으로 가서 단축키가 먹지 않음 → 포커스 되찾기
+window.addEventListener('blur', () => setTimeout(() => {
+  if (document.activeElement && document.activeElement.tagName === 'IFRAME') { document.activeElement.blur(); window.focus(); }
+}, 0));
+
+/* ---------------- boot ---------------- */
+renderAll();
+requestAnimationFrame(frame);
+function loadFromHash() {
+  const m = location.hash.match(/v=([\w-]{11})/);
+  if (m && m[1] !== S.videoId) loadVideo(m[1]);
+}
+window.addEventListener('hashchange', loadFromHash);
+loadFromHash();
+</script>
+</body>
+</html>
