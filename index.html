@@ -41,6 +41,8 @@ header{display:flex;gap:10px;align-items:center;padding:10px 12px;padding-top:ca
 .brand span{color:var(--accent)}
 #urlForm{display:flex;gap:6px;flex:1;min-width:0}
 #urlInput{flex:1}
+#helpLink{flex:0 0 auto;width:var(--tap);height:var(--tap);display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;color:var(--muted);text-decoration:none;font-weight:700}
+#helpLink:hover{color:var(--text);border-color:#4a515b}
 #recent{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px;scrollbar-width:none}
 #recent::-webkit-scrollbar{display:none}
 #recent:empty{display:none}
@@ -201,6 +203,7 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
     <input id="urlInput" type="text" inputmode="url" placeholder="YouTube 링크 붙여넣기">
     <button class="primary" type="submit">열기</button>
   </form>
+  <a id="helpLink" href="https://github.com/schatten97/track0#readme" target="_blank" rel="noopener" title="사용 설명서" aria-label="사용 설명서">?</a>
 </header>
 <div id="recent"></div>
 
