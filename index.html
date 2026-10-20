@@ -169,10 +169,16 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
 .opt-grid select{width:100%;text-overflow:ellipsis}
 .opt-grid label{flex-direction:column;align-items:stretch;gap:6px;font-size:13px;color:var(--muted)}
 .sub-extra{grid-column:1 / -1;display:flex;flex-direction:column;gap:8px}
-#subViz{position:relative;height:28px;background:var(--fill);border-radius:10px;overflow:hidden}
-#subViz .bt{position:absolute;top:0;bottom:0;width:1px;background:var(--line-strong)}
-#subViz .hit{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--accent-soft)}
-#subViz .hit.main{width:14px;height:14px;margin:-7px 0 0 -7px;background:var(--accent)}
+#previewBtn{grid-column:1 / -1}
+#volRow{grid-column:1 / -1;flex-direction:row !important;align-items:center !important;gap:12px !important}
+#volRow input{flex:1}
+.opt-title{font-size:13px;color:var(--muted);font-weight:500}
+#subGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.sub-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:80px;padding:6px 2px;background:var(--fill);border:1.5px solid transparent;color:var(--text)}
+.sub-tile svg{width:68px;height:44px;display:block}
+.sub-tile span{font-size:12px;color:var(--body);font-weight:600;white-space:nowrap}
+.sub-tile.cur{background:var(--accent-weak);border-color:var(--accent);color:var(--accent-weak-fg)}
+.sub-tile.cur span{color:var(--accent-weak-fg)}
 #swingRow{flex-direction:row !important;align-items:center !important;gap:10px !important}
 #swingRow input{flex:1}
 #swingVal{min-width:0;white-space:nowrap;text-align:right;color:var(--body);font-weight:600}
@@ -413,26 +419,6 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
             <option value="4" selected>4/4</option><option value="5">5/4</option><option value="6">6/8 (6)</option><option value="7">7/8 (7)</option>
           </select>
         </label>
-        <label>쪼개기
-          <select id="subSel">
-            <option value="1">없음 (4분)</option>
-            <option value="8">8분</option>
-            <option value="8sw">8분 스윙 · 셔플</option>
-            <option value="3">셋잇단</option>
-            <option value="16">16분</option>
-            <option value="16sw">16분 스윙</option>
-            <option value="gallop">갤럽 (8분+16분 2개)</option>
-            <option value="revgallop">역갤럽 (16분 2개+8분)</option>
-            <option value="dotted">점8분+16분</option>
-          </select>
-        </label>
-        <div class="sub-extra">
-          <div id="subViz" aria-hidden="true"></div>
-          <label id="swingRow">스윙 정도
-            <input id="swingRange" type="range" min="50" max="75" step="1" value="67">
-            <span id="swingVal" class="mono"></span>
-          </label>
-        </div>
         <label>소리
           <select id="soundSel">
             <option value="beep">비프</option>
@@ -446,8 +432,16 @@ body[data-tab="metro"] .panel:not([data-panel="metro"]){display:none}
             <option value="drum">드럼 (킥·스네어·하이햇)</option>
           </select>
         </label>
-        <button id="previewBtn" class="ghost" style="align-self:end">▶ 한 마디 들어보기</button>
-        <label>볼륨
+        <div class="sub-extra">
+          <div class="opt-title">쪼개기</div>
+          <div id="subGrid" role="radiogroup" aria-label="쪼개기 리듬"></div>
+          <label id="swingRow">스윙 정도
+            <input id="swingRange" type="range" min="50" max="75" step="1" value="67">
+            <span id="swingVal" class="mono"></span>
+          </label>
+        </div>
+        <button id="previewBtn">▶ 한 마디 들어보기</button>
+        <label id="volRow">볼륨
           <input id="volRange" type="range" min="0" max="100" value="70">
         </label>
       </div>
@@ -1353,7 +1347,7 @@ function renderTrainer() {
 }
 function renderAll() {
   $('#bpmInput').value = S.bpm;
-  $('#beatsSel').value = S.beats; $('#subSel').value = S.sub; renderSub();
+  $('#beatsSel').value = S.beats; renderSub();
   $('#accentChk').checked = S.accent; $('#soundSel').value = S.sound;
   $('#volRange').value = Math.round(S.vol * 100);
   $('#syncChk').checked = S.sync; $('#snapChk').checked = S.snap;
@@ -1427,22 +1421,65 @@ $('#undoMark').onclick = () => {
 };
 $('#clearMarks').onclick = () => { S.anchor = beatTime(0); clearMarks(); resetSync(); saveVideo(); toast('싱크 포인트를 모두 지웠어요'); };
 $('#beatsSel').onchange = e => { S.beats = +e.target.value; renderDots(); resetSync(); saveGlobal(); lastCanvasKey = ''; };
-function renderSub() {
-  const offs = subOffsets(), viz = $('#subViz');
-  // 2박 분량을 그려서 반복되는 느낌이 보이게
-  let html = '';
-  for (let b = 0; b < 2; b++) {
-    html += `<div class="bt" style="left:${b * 50 + 4}%"></div>`;
-    offs.forEach((o, i) => { html += `<div class="hit${i ? '' : ' main'}" style="left:${(b + o) * 50 + 4}%"></div>`; });
+/* 쪼개기 패턴을 한 박짜리 악보로 그림 (음표머리·기둥·빔·꼬리·점·셋잇단) */
+const SUB_NOTES = [
+  ['1', '4분', { n: 1 }],
+  ['8', '8분', { n: 2, beam: true }],
+  ['8sw', '셔플·스윙', { n: 2, flag: [1], tuplet: true }],
+  ['3', '셋잇단', { n: 3, beam: true, tuplet: true }],
+  ['16', '16분', { n: 4, beam: true, beam2: [[0, 3]] }],
+  ['16sw', '16분 스윙', { n: 4, beam: true, beam2: [[0, 3]], text: 'swing' }],
+  ['gallop', '갤럽', { n: 3, beam: true, beam2: [[1, 2]] }],
+  ['revgallop', '역갤럽', { n: 3, beam: true, beam2: [[0, 1]] }],
+  ['dotted', '점8분+16분', { n: 2, beam: true, stub: [1], dot: [0] }],
+];
+function noteSvg(o) {
+  const HY = 36, TOP = 12, B2 = TOP + 6;
+  const xs = o.n === 1 ? [30] : Array.from({ length: o.n }, (_, i) => 14 + i * (36 / (o.n - 1)));
+  const sx = xs.map(x => x + 4.3);
+  let g = '';
+  xs.forEach((x, i) => {
+    g += `<ellipse cx="${x}" cy="${HY}" rx="4.8" ry="3.5" transform="rotate(-22 ${x} ${HY})"/>`;
+    g += `<rect x="${sx[i] - 0.7}" y="${TOP}" width="1.4" height="${HY - TOP - 1}"/>`;
+  });
+  if (o.beam) g += `<rect x="${sx[0] - 0.7}" y="${TOP}" width="${sx[o.n - 1] - sx[0] + 1.4}" height="3.8"/>`;
+  (o.beam2 || []).forEach(([a, b]) => { g += `<rect x="${sx[a] - 0.7}" y="${B2}" width="${sx[b] - sx[a] + 1.4}" height="3.8"/>`; });
+  (o.stub || []).forEach(i => { g += `<rect x="${sx[i] - 8}" y="${B2}" width="8.7" height="3.8"/>`; });
+  (o.flag || []).forEach(i => { g += `<path d="M${sx[i]} ${TOP}q1 6 7 9q2.5 3-1 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>`; });
+  (o.dot || []).forEach(i => { g += `<circle cx="${xs[i] + 9}" cy="${HY - 1}" r="1.7"/>`; });
+  if (o.tuplet) {
+    const a = xs[0] - 2, b = sx[o.n - 1] + 2, m = (a + b) / 2;
+    g += `<path d="M${a} 8V4H${m - 4}M${m + 4} 4H${b}V8" fill="none" stroke="currentColor" stroke-width="1.1"/>`;
+    g += `<text x="${m}" y="7.5" text-anchor="middle" font-size="9" font-weight="700" font-style="italic">3</text>`;
   }
-  viz.innerHTML = html;
+  if (o.text) g += `<text x="34" y="7" text-anchor="middle" font-size="8.5" font-style="italic" font-weight="600">${o.text}</text>`;
+  return `<svg viewBox="0 0 68 44" fill="currentColor" aria-hidden="true">${g}</svg>`;
+}
+(function buildSubGrid() {
+  const grid = $('#subGrid');
+  SUB_NOTES.forEach(([key, label, o]) => {
+    const b = document.createElement('button');
+    b.className = 'sub-tile'; b.dataset.sub = key; b.title = label;
+    b.setAttribute('role', 'radio');
+    b.innerHTML = noteSvg(o) + `<span>${label}</span>`;
+    b.onclick = () => {
+      S.sub = key; freeNext = 0; freeTick = 0; resetSync(); saveGlobal(); renderSub();
+      if (!S.metroOn) previewBar();
+    };
+    grid.appendChild(b);
+  });
+})();
+function renderSub() {
+  $$('#subGrid .sub-tile').forEach(b => {
+    const on = b.dataset.sub === S.sub;
+    b.classList.toggle('cur', on); b.setAttribute('aria-checked', on);
+  });
   const swing = S.sub === '8sw' || S.sub === '16sw';
   $('#swingRow').style.display = swing ? '' : 'none';
   const pct = Math.round(S.swing * 100);
   $('#swingRange').value = pct;
   $('#swingVal').textContent = pct + '% ' + (pct <= 52 ? '(스트레이트)' : Math.abs(pct - 67) <= 1 ? '(셋잇단 셔플)' : pct >= 74 ? '(점음표)' : '');
 }
-$('#subSel').onchange = e => { S.sub = e.target.value; freeNext = 0; freeTick = 0; resetSync(); saveGlobal(); renderSub(); };
 $('#swingRange').oninput = e => { S.swing = +e.target.value / 100; resetSync(); saveGlobal(); renderSub(); };
 $('#previewBtn').onclick = previewBar;
 $('#accentChk').onchange = e => { S.accent = e.target.checked; renderDots(); saveGlobal(); };
